@@ -3,11 +3,9 @@ import re
 from os import listdir
 from os.path import isfile, join
 
+import cv2
 import numpy as np
 from matplotlib import pyplot as plt
-from skimage import data, measure, filters
-from skimage.exposure import exposure
-from skimage.filters import scharr
 
 
 def findNamesOfPictures():
@@ -22,32 +20,25 @@ def findNamesOfPictures():
     return nameOfImagesToProcessing
 
 
-def showImages(images, contours):
+def showImages(images):
     print("wypisuje zdjecia")
     fig, axes = plt.subplots(5, 5, figsize=(10,10), sharex= True, sharey= True)
     ax = axes.ravel();
     for i in range(len(images)):
-        ax[i].imshow(images[i], interpolation="nearest", extent=[-2, 4, -2, 4], cmap="gray")
+        ax[i].imshow(images[i], interpolation="nearest", extent=[-2, 4, -2, 4])
         ax[i].set_title(imageNames[i])
         ax[i].axis('off')
-        for n, contour in enumerate(contours[i]):
-            if n > 10:
-                break
-            temp = contour
-            ax[i].plot(temp[:, 1], temp[:, 0], linewidth=1)
+        # for n, contour in enumerate(contours[i]):
+        #     if n > 10:
+        #         break
+        #     temp = contour
+        #     ax[i].plot(temp[:, 1], temp[:, 0], linewidth=1)
 
     plt.savefig('test.pdf')
 
 
 def findContours(images):
     result = []
-    for i in range(len(images)):
-        p2, p98 = np.percentile(images[i], (0, 95))
-        images[i] = exposure.rescale_intensity(images[i], in_range=(p2, p98))
-
-        images[i] = scharr(images[i])
-        images[i] = filters.sobel(images[i])
-        result.append(measure.find_contours(images[i], level=0.14, fully_connected="high", positive_orientation="high"))
 
     # result= measure.find_contours(images[0], level=0.7)
     return result
@@ -56,7 +47,16 @@ def findContours(images):
 def loadImages(names):
     result = []
     for i in range(len(names)):
-        result.append(data.imread(names[i], as_grey=True))
+        result.append(cv2.imread(names[i], cv2.IMREAD_COLOR))
+    return result
+
+
+def rgbBgrConversion(images):
+    result = []
+    for i in range(len(images)):
+        temp = images[i]
+        temp = temp[:, :, ::-1]
+        result.append(temp)
     return result
 
 
@@ -64,5 +64,9 @@ def loadImages(names):
 if __name__ == "__main__":
     imageNames = findNamesOfPictures()
     imageCollection = loadImages(imageNames)
-    contours = findContours(imageCollection)
-    showImages(imageCollection, contours)
+    imageCollection = np.array(imageCollection)
+    print(type(imageCollection))
+    print(imageCollection[0].shape)
+    imageCollection = rgbBgrConversion(imageCollection)
+    # contours = findContours(imageCollection)
+    showImages(imageCollection)
