@@ -25,7 +25,7 @@ def showImages(images):
     fig, axes = plt.subplots(5, 5, figsize=(10,10), sharex= True, sharey= True)
     ax = axes.ravel();
     for i in range(len(images)):
-        ax[i].imshow(images[i], interpolation="nearest", extent=[-2, 4, -2, 4])
+        ax[i].imshow(images[i], interpolation="nearest", extent=[-2, 4, -2, 4], cmap="gray")
         ax[i].set_title(imageNames[i])
         ax[i].axis('off')
         # for n, contour in enumerate(contours[i]):
@@ -47,7 +47,7 @@ def findContours(images):
 def loadImages(names):
     result = []
     for i in range(len(names)):
-        result.append(cv2.imread(names[i], cv2.IMREAD_COLOR))
+        result.append(cv2.imread(names[i], cv2.IMREAD_GRAYSCALE))
     return result
 
 
@@ -60,13 +60,29 @@ def rgbBgrConversion(images):
     return result
 
 
+def denoisingImages(images):
+    result = []
+    for i in range(len(images)):
+        temp = images[i]
+        temp = cv2.fastNlMeansDenoising(temp, h=10, templateWindowSize=7, searchWindowSize=21)
+        result.append(temp)
+    return result
+
+
+def filteringImages(images):
+    result = []
+    for i in range(len(images)):
+        temp = images[i]
+        temp = cv2.Canny(temp, 100, 250, L2gradient=True)
+        result.append(temp)
+    return result
 
 if __name__ == "__main__":
     imageNames = findNamesOfPictures()
     imageCollection = loadImages(imageNames)
     imageCollection = np.array(imageCollection)
-    print(type(imageCollection))
-    print(imageCollection[0].shape)
-    imageCollection = rgbBgrConversion(imageCollection)
+    imageCollection = denoisingImages(imageCollection)
+    imageCollection = filteringImages(imageCollection)
+    # imageCollection = rgbBgrConversion(imageCollection)
     # contours = findContours(imageCollection)
     showImages(imageCollection)
