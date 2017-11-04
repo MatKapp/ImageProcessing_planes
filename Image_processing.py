@@ -1,4 +1,5 @@
 import os
+import random
 import re
 from os import listdir
 from os.path import isfile, join
@@ -25,12 +26,12 @@ def findContours(images):
     goodContours = []
     for i in range (len (images)):
         # ret, thresh = cv2.threshold (images[i], 127, 255, 0)
-        image, contours, hierarchy = cv2.findContours (np.array (images[i]), cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+        image, contours, hierarchy = cv2.findContours (np.array (images[i]), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         for j in range (len (contours)):
             print (cv2.contourArea (contours[j]))
-            if (cv2.contourArea (contours[j]) > 100000):
+            if (cv2.contourArea (contours[j]) > 10000):
                 goodContours.append (contours[j])
-        result.append (goodContours)
+        result.append (contours)
     return result
 
 
@@ -39,7 +40,9 @@ def drawContours(images, contours):
     for i in range (len (images)):
         print (type (np.array (contours[i])))
         print ((np.array (contours[i])).shape)
-        result.append (cv2.drawContours (np.array (images[i]), np.array (contours[i]), -1, (155, 155, 155), 1))
+        result.append (cv2.drawContours (np.array (images[i]), np.array (contours[i]), -1,
+                                         ((random.randint (0, 255), random.randint (0, 255), random.randint (0, 255))),
+                                         7))
     return result
 
 
@@ -48,7 +51,7 @@ def showImages(images):
     fig, axes = plt.subplots(5, 5, figsize=(10,10), sharex= True, sharey= True)
     ax = axes.ravel();
     for i in range(len(images)):
-        ax[i].imshow(images[i], interpolation="nearest", extent=[-2, 4, -2, 4], cmap="gray")
+        ax[i].imshow (images[i], interpolation="nearest", extent=[-2, 4, -2, 4])
         ax[i].set_title(imageNames[i])
         ax[i].axis('off')
         # for n, contour in enumerate(contours[i]):
@@ -63,7 +66,7 @@ def showImages(images):
 def loadImages(names):
     result = []
     for i in range(len(names)):
-        result.append(cv2.imread(names[i], cv2.IMREAD_GRAYSCALE))
+        result.append (cv2.imread (names[i], cv2.IMREAD_COLOR))
     return result
 
 
@@ -130,9 +133,14 @@ def filteringImages2(images):
         temp = cv2.medianBlur (temp, 5)
         temp = gamma_correction (temp, gamma)
         temp = cv2.Laplacian (temp, cv2.CV_8UC1)
-        temp = cv2.dilate (temp, kernel, iterations=5)
+        temp = cv2.dilate (temp, kernel, iterations=3)
         temp = cv2.erode (temp, kernel, iterations=2)
+        temp = cv2.morphologyEx (temp, cv2.MORPH_OPEN, kernel)
+        temp = cv2.morphologyEx (temp, cv2.MORPH_CLOSE, kernel)
+        thresh = 20
+        temp = cv2.threshold (temp, thresh, 255, cv2.THRESH_BINARY)[1]
         # temp=cv2.bitwise_not(temp)
+        # temp= cv2.Canny(temp, 100, 200)
         # hist, bins = np.histogram (temp, 256, [0, 256])
         # cdf = hist.cumsum ()
         # cdf_normalized = cdf * hist.max () / cdf.max ()
@@ -150,15 +158,21 @@ def filteringImages2(images):
     return result
 
 
+def bgrToGrayCollection(images):
+    result = []
+    for i in range (len (images)):
+        result.append (cv2.cvtColor (images[i], cv2.COLOR_BGR2GRAY))
+    return result
+
 if __name__ == "__main__":
     imageNames = findNamesOfPictures()
     imageCollection = loadImages(imageNames)
-    imageCollection = np.array(imageCollection)
-    imageCollection = denoisingImages (imageCollection)
-    imageCollection = filteringImages2 (imageCollection)
+    grayImageCollection = bgrToGrayCollection (imageCollection)
+    grayImageCollection = np.array (grayImageCollection)
+    grayImageCollection = denoisingImages (grayImageCollection)
+    grayImageCollection = filteringImages2 (grayImageCollection)
 
-    # contours = findContours (imageCollection)
-    # imageCollection = drawContours(imageCollection, contours)
-
-
+    contours = findContours (grayImageCollection)
+    imageCollection = drawContours (imageCollection, contours)
+    imageCollection = rgbBgrConversion (imageCollection)
     showImages(imageCollection)
