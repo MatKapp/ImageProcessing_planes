@@ -26,7 +26,7 @@ def findContours(images):
     goodContours = []
     for i in range (len (images)):
         # ret, thresh = cv2.threshold (images[i], 127, 255, 0)
-        image, contours, hierarchy = cv2.findContours (np.array (images[i]), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        image, contours, hierarchy = cv2.findContours (np.array (images[i]), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         for j in range (len (contours)):
             print (cv2.contourArea (contours[j]))
             if (cv2.contourArea (contours[j]) > 10000):
@@ -40,15 +40,22 @@ def drawContours(images, contours):
     for i in range (len (images)):
         print (type (np.array (contours[i])))
         print ((np.array (contours[i])).shape)
-        result.append (cv2.drawContours (np.array (images[i]), np.array (contours[i]), -1,
-                                         ((random.randint (0, 255), random.randint (0, 255), random.randint (0, 255))),
-                                         7))
+        temp = images[i]
+        cnt = contours[i]
+        for j in range (len (cnt)):
+            temp = cv2.drawContours (np.array (temp), np.array (cnt), j,
+                                     (random.randint (0, 255), random.randint (0, 255), random.randint (0, 255)), 7)
+            M = cv2.moments (cnt[j])
+            cX = int (M["m10"] / M["m00"])
+            cY = int (M["m01"] / M["m00"])
+            temp = cv2.circle (np.array (temp), (cX, cY), 7, (250, 250, 250), -1)
+        result.append (temp)
     return result
 
 
 def showImages(images):
     print("wypisuje zdjecia")
-    fig, axes = plt.subplots(5, 5, figsize=(10,10), sharex= True, sharey= True)
+    fig, axes = plt.subplots (3, 6, figsize=(10, 10), sharex=True, sharey=True)
     ax = axes.ravel();
     for i in range(len(images)):
         ax[i].imshow (images[i], interpolation="nearest", extent=[-2, 4, -2, 4])
@@ -128,17 +135,18 @@ def filteringImages2(images):
         temp = images[i]
 
         gamma = 0.5
-        kernel = np.ones ((5, 5), np.uint8)
+        kernel = np.ones ((7, 7), np.uint8)
 
-        temp = cv2.medianBlur (temp, 5)
+        temp = cv2.medianBlur (temp, 7)
         temp = gamma_correction (temp, gamma)
         temp = cv2.Laplacian (temp, cv2.CV_8UC1)
         temp = cv2.dilate (temp, kernel, iterations=3)
         temp = cv2.erode (temp, kernel, iterations=2)
-        temp = cv2.morphologyEx (temp, cv2.MORPH_OPEN, kernel)
+
         temp = cv2.morphologyEx (temp, cv2.MORPH_CLOSE, kernel)
         thresh = 20
         temp = cv2.threshold (temp, thresh, 255, cv2.THRESH_BINARY)[1]
+        temp = cv2.morphologyEx (temp, cv2.MORPH_OPEN, kernel)
         # temp=cv2.bitwise_not(temp)
         # temp= cv2.Canny(temp, 100, 200)
         # hist, bins = np.histogram (temp, 256, [0, 256])
